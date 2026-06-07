@@ -90,26 +90,6 @@ function applyBranding(branding) {
   setText('serviceModalTitle', branding.serviceModalTitle || 'Escolha um serviço para iniciar');
   setText('serviceModalSubtitle', branding.serviceModalSubtitle || 'Somente Iluminação Pública está liberada. Os demais módulos chegarão em breve.');
 
-  const heroNoteEl = document.getElementById('heroNoteText');
-  if (heroNoteEl) {
-    heroNoteEl.textContent = branding.heroNote || 'Indicadores detalhados ficam disponíveis apenas no painel institucional.';
-  }
-  const highlightsList = document.getElementById('heroHighlights');
-  if (highlightsList) {
-    highlightsList.innerHTML = '';
-    const items = Array.isArray(branding.heroHighlights) ? branding.heroHighlights : [];
-    if (items.length) {
-      highlightsList.style.display = 'flex';
-      items.forEach((item) => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        highlightsList.appendChild(li);
-      });
-    } else {
-      highlightsList.style.display = 'none';
-    }
-  }
-
   const aboutParagraph = document.querySelector('#aboutText p');
   if (aboutParagraph) {
     aboutParagraph.textContent = branding.aboutText || aboutParagraph.textContent;
@@ -315,7 +295,6 @@ function selectService(service) {
   document.getElementById('serviceModal').classList.add('hidden');
   const mapSection = document.getElementById('mapSection');
   mapSection.classList.remove('hidden');
-  document.getElementById('heroNote')?.classList.remove('hidden');
   const hiddenField = document.getElementById('reportServiceSlug');
   if (hiddenField) hiddenField.value = service.slug;
   requestAnimationFrame(() => {
@@ -365,7 +344,6 @@ async function loadStatistics() {
       sla: data.averageResolutionMinutes ?? '--'
     };
     syncStatBlocks(totals);
-    setText('statsUpdated', data.generatedAt ? `Atualizado em ${formatDate(data.generatedAt)}` : 'Em atualização');
     renderHotspots(data.hotspots || []);
     renderProtocols(data.recentProtocols || []);
   } catch (error) {

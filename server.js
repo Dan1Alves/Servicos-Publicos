@@ -368,8 +368,6 @@ function seedBranding() {
     heroImage: null,
     heroTitle: 'Gestao Urbana Integrada',
     heroSubtitle: 'Monitoramento institucional da iluminacao publica com foco em resposta rapida.',
-    heroNote: 'Indicadores detalhados ficam disponiveis apenas no painel institucional.',
-    heroHighlights: ['Mapa em tempo real', 'Protocolos rastreaveis', 'Protecao contra spam'],
     inlineHelperText: 'Escolha um poste no mapa e clique em "Preencher denuncia".',
     inlineButtonText: 'Preencher denuncia',
     inlineCardTitle: 'Poste selecionado',

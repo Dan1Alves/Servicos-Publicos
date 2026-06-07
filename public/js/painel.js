@@ -475,8 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
       cityName: branding.cityName || '',
       heroTitle: branding.heroTitle || '',
       heroSubtitle: branding.heroSubtitle || '',
-      heroNote: branding.heroNote || '',
-      heroHighlights: (branding.heroHighlights || []).join(', '),
       inlineHelperText: branding.inlineHelperText || '',
       inlineButtonText: branding.inlineButtonText || '',
       serviceModalTitle: branding.serviceModalTitle || '',
@@ -532,9 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.forEach((rawValue, key) => {
       const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
       switch (key) {
-        case 'heroHighlights':
-          payload.heroHighlights = value ? value.split(',').map((item) => item.trim()).filter(Boolean) : [];
-          break;
         case 'heroCtaText':
           heroCta.text = value;
           break;
