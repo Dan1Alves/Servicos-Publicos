@@ -45,6 +45,10 @@ body:has(#serviceModal:not(.hidden)) {
   overflow: hidden;
 }
 
+body:has(#cityModal:not(.hidden)) {
+  overflow: hidden;
+}
+
 [hidden],
 .hidden {
   display: none !important;
@@ -512,6 +516,41 @@ footer {
 }
 
 .service-card button {
+  margin-top: auto;
+}
+
+.city-modal-cards {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.city-card {
+  border: 2px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card-background);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.city-card h3,
+.city-card p {
+  margin: 0;
+}
+
+.city-card h3 {
+  color: var(--primary);
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.city-card p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.city-card .btn {
   margin-top: auto;
 }
 

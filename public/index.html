@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="/css/style.css?v=city-routing-20260607" />
+  <link rel="stylesheet" href="/css/style.css?v=city-selector-20260607" />
 </head>
 <body>
   <header class="site-header">
@@ -22,7 +22,18 @@
   </header>
 
   <main>
-    <section class="service-modal" id="serviceModal">
+    <section class="service-modal hidden" id="cityModal">
+      <div class="service-modal-content">
+        <div class="service-modal-header">
+          <p class="eyebrow">Portal municipal</p>
+          <h2>Escolha sua cidade</h2>
+          <p class="muted">Selecione a prefeitura para acessar o mapa e os serviços disponíveis.</p>
+        </div>
+        <div class="service-modal-cards city-modal-cards" id="cityCards"></div>
+      </div>
+    </section>
+
+    <section class="service-modal hidden" id="serviceModal">
       <div class="service-modal-content">
         <div class="service-modal-header">
           <p class="eyebrow">Plataforma oficial</p>
@@ -125,6 +136,6 @@
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
-  <script src="/js/portal.js?v=city-routing-20260607" defer></script>
+  <script src="/js/portal.js?v=city-selector-20260607" defer></script>
 </body>
 </html>

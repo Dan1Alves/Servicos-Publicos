@@ -5,8 +5,7 @@ const state = {
   coords: null,
   branding: null,
   activeService: null,
-  citySlugFromPath: null,
-  autoOpenService: null
+  citySlugFromPath: null
 };
 
 const SERVICE_FLOW = [
@@ -533,18 +532,43 @@ function pickCityFromPath(cities) {
   return cities.find(city => city.slug.toLowerCase() === slug) || null;
 }
 
-function pickDefaultService(services) {
-  const list = services || [];
-  return list.find(service => service.slug === 'iluminacao-publica' && service.status === 'active')
-    || list.find(service => service.status === 'active')
-    || null;
-}
-
 function updateCityLinks() {
   if (!state.city?.slug) return;
   const cityPath = `/${state.city.slug}`;
   document.querySelectorAll('a[href="/"]').forEach(link => {
     link.href = cityPath;
+  });
+}
+
+function renderCitySelector(cities) {
+  const container = document.getElementById('cityCards');
+  if (!container) return;
+  container.innerHTML = '';
+  const activeCities = cities || [];
+  if (!activeCities.length) {
+    const empty = document.createElement('article');
+    empty.className = 'city-card';
+    empty.innerHTML = '<h3>Nenhuma cidade ativa</h3><p>Cadastre uma cidade no painel para liberar o portal público.</p>';
+    container.appendChild(empty);
+    return;
+  }
+  activeCities.forEach((city) => {
+    const card = document.createElement('article');
+    card.className = 'city-card';
+    card.innerHTML = `
+      <div>
+        <h3>${city.name}</h3>
+        <p>Acesse o mapa e os serviços disponíveis desta prefeitura.</p>
+      </div>`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-primary';
+    button.textContent = 'Acessar portal';
+    button.addEventListener('click', () => {
+      window.location.href = `/${city.slug}`;
+    });
+    card.appendChild(button);
+    container.appendChild(card);
   });
 }
 
@@ -554,16 +578,23 @@ async function loadConfig() {
     const data = await res.json();
     const cityFromPath = pickCityFromPath(data.cities);
     const cityFromQuery = pickCityFromQuery(data.cities);
-    state.city = cityFromPath || cityFromQuery || data.defaultCity || data.cities?.[0] || null;
+    const hasCityContext = Boolean(cityFromPath || cityFromQuery);
+    state.city = cityFromPath || cityFromQuery || null;
     applyBranding(data.branding);
-    updateCityLinks();
+    if (state.city) {
+      updateCityLinks();
+    }
+    renderCitySelector(data.cities || []);
     renderServiceSelector(data.services || []);
-    state.autoOpenService = cityFromPath ? pickDefaultService(data.services) : null;
-    setText(
-      'selectedServiceLabel',
-      state.autoOpenService ? 'Mapa carregado para a cidade selecionada.' : 'Selecione o serviço para liberar o mapa.'
-    );
-    await loadStatistics();
+    setText('selectedServiceLabel', 'Selecione o serviço para liberar o mapa.');
+    if (hasCityContext && state.city) {
+      document.getElementById('cityModal')?.classList.add('hidden');
+      document.getElementById('serviceModal')?.classList.remove('hidden');
+      await loadStatistics();
+    } else {
+      document.getElementById('serviceModal')?.classList.add('hidden');
+      document.getElementById('cityModal')?.classList.remove('hidden');
+    }
     updateInlineSummary();
   } catch (error) {
     console.error('Erro ao carregar configuração pública', error);
@@ -637,7 +668,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInteractions();
   await loadConfig();
   initMap();
-  if (state.autoOpenService) {
-    selectService(state.autoOpenService, { scroll: false });
-  }
 });

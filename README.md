@@ -12,7 +12,8 @@ Plataforma completa (frontend + backend) para gestão urbana com foco inicial em
 
 | Página | URL | Conteúdo |
 | --- | --- | --- |
-| Home / Mapa público | `/` e `/:slug-da-cidade` (também aceita `?city=slug`) | Na URL da cidade, abre direto o mapa MapLibre centralizado no município; o cidadão só compartilha GPS ao clicar em “Ir para minha localização”. |
+| Seleção de cidade | `/` | Modal inicial com as prefeituras ativas para o cidadão escolher. |
+| Home / Mapa público | `/:slug-da-cidade` (também aceita `?city=slug`) | Abre o modal de serviços da cidade escolhida; depois da seleção, mostra o mapa MapLibre centralizado no município. O cidadão só compartilha GPS ao clicar em “Ir para minha localização”. |
 | Contato | `/contato` | Canais oficiais e formulário local para registrar interesse. |
 | Login Institucional | `/login` | Tela dedicada de autenticação (Admin/Dev) com redirecionamento automático para o painel após validar o token. |
 | Painel Admin / Dev | `/painel` | Login único, dashboard, filtros, mapa operacional e ferramentas avançadas para Dev. |
