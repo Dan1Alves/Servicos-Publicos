@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/css/style.css?v=visual-20260607-2" />
+  <link rel="stylesheet" href="/css/style.css?v=city-routing-20260607" />
 </head>
 <body class="panel-body">
   <div class="panel-app" id="panelApp" hidden>
@@ -57,6 +57,33 @@
                 </div>
               </div>
               <div class="stats-grid" id="panelStats"></div>
+              <form id="cityCenterForm" class="city-center-form">
+                <div class="panel-card-head">
+                  <div>
+                    <p class="eyebrow">Mapa público</p>
+                    <h3>Centro da cidade</h3>
+                  </div>
+                  <a id="cityPublicUrl" class="ghost-link" href="/" target="_blank" rel="noopener">Abrir portal</a>
+                </div>
+                <div class="three-column">
+                  <div>
+                    <label for="cityCenterLat">Latitude</label>
+                    <input type="number" step="any" id="cityCenterLat" name="default_lat" required />
+                  </div>
+                  <div>
+                    <label for="cityCenterLng">Longitude</label>
+                    <input type="number" step="any" id="cityCenterLng" name="default_lng" required />
+                  </div>
+                  <div>
+                    <label for="cityCenterZoom">Zoom</label>
+                    <input type="number" min="3" max="20" id="cityCenterZoom" name="default_zoom" required />
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button type="submit" class="btn btn-primary">Salvar centro do mapa</button>
+                </div>
+                <div class="result" id="cityCenterResult"></div>
+              </form>
             </article>
             <article class="panel-card map-card">
               <div class="panel-card-head">
@@ -424,6 +451,6 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/js/painel.js" defer></script>
+  <script src="/js/painel.js?v=city-routing-20260607" defer></script>
 </body>
 </html>

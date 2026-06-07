@@ -4,7 +4,9 @@ const state = {
   selectedPost: null,
   coords: null,
   branding: null,
-  activeService: null
+  activeService: null,
+  citySlugFromPath: null,
+  autoOpenService: null
 };
 
 const SERVICE_FLOW = [
@@ -25,7 +27,7 @@ const SERVICE_FLOW = [
   }
 ];
 
-const MAP_DEFAULT = { lat: -23.55052, lng: -46.633308, zoom: 13 };
+const MAP_DEFAULT = { lat: -14.235004, lng: -51.92528, zoom: 4 };
 const MAP_DEFAULT_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 let mapStyleUrl = MAP_DEFAULT_STYLE;
 
@@ -33,7 +35,6 @@ let mapInstance = null;
 let mapReady = false;
 let markerRefs = [];
 let userMarker = null;
-let geoWatchId = null;
 let pendingUserCoords = null;
 
 function setText(id, value) {
@@ -83,10 +84,10 @@ function attemptReportFlow() {
 function applyBranding(branding) {
   if (!branding) return;
   state.branding = branding;
-  setText('brandName', branding.organization || 'Gestão Urbana');
+  setText('brandName', state.city?.name || branding.organization || 'Gestão Urbana');
   setText('heroTitle', branding.heroTitle || 'Gestão Urbana Integrada');
   setText('heroSubtitle', branding.heroSubtitle || 'Monitoramento institucional.');
-  setText('heroCity', branding.cityName || branding.organization || 'Cidade Modelo');
+  setText('heroCity', state.city?.name || branding.cityName || branding.organization || 'Cidade Modelo');
   setText('serviceModalTitle', branding.serviceModalTitle || 'Escolha um serviço para iniciar');
   setText('serviceModalSubtitle', branding.serviceModalSubtitle || 'Somente Iluminação Pública está liberada. Os demais módulos chegarão em breve.');
 
@@ -185,11 +186,12 @@ function initMap() {
     console.warn('MapLibre não carregado.');
     return;
   }
+  const initialView = getInitialMapView();
   mapInstance = new maplibregl.Map({
     container: 'map',
     style: mapStyleUrl,
-    center: [MAP_DEFAULT.lng, MAP_DEFAULT.lat],
-    zoom: MAP_DEFAULT.zoom,
+    center: [initialView.lng, initialView.lat],
+    zoom: initialView.zoom,
     attributionControl: true
   });
   mapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right');
@@ -204,10 +206,25 @@ function initMap() {
   });
 }
 
+function getInitialMapView() {
+  const lat = Number(state.city?.default_lat);
+  const lng = Number(state.city?.default_lng);
+  const zoom = Number(state.city?.default_zoom);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return {
+      lat,
+      lng,
+      zoom: Number.isFinite(zoom) ? zoom : MAP_DEFAULT.zoom
+    };
+  }
+  return MAP_DEFAULT;
+}
+
 function centerOnCity() {
   if (!mapInstance || !state.city) return;
-  const center = [state.city.default_lng, state.city.default_lat];
-  const zoom = state.city.default_zoom || MAP_DEFAULT.zoom;
+  const view = getInitialMapView();
+  const center = [view.lng, view.lat];
+  const zoom = view.zoom;
   if (mapReady) {
     mapInstance.jumpTo({ center, zoom });
   } else {
@@ -289,7 +306,9 @@ function openDrawerMessage(message) {
   document.getElementById('postDrawer').classList.add('open');
 }
 
-function selectService(service) {
+function selectService(service, options = {}) {
+  if (!service) return;
+  const shouldScroll = options.scroll !== false;
   state.activeService = service;
   setText('selectedServiceLabel', `${service.name} ativo. Localize o poste e toque em "Reportar problema".`);
   document.getElementById('serviceModal').classList.add('hidden');
@@ -302,8 +321,9 @@ function selectService(service) {
     centerOnCity();
   });
   loadPosts();
-  requestGeolocation();
-  mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (shouldScroll) {
+    mapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   updateInlineSummary();
 }
 
@@ -385,23 +405,32 @@ function renderProtocols(rows) {
   });
 }
 
-function requestGeolocation() {
+function setLocationStatus(message, isPersistent = false) {
+  const el = document.getElementById('locationStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('visible', Boolean(message));
+  if (message && !isPersistent) {
+    window.setTimeout(() => {
+      el.textContent = '';
+      el.classList.remove('visible');
+    }, 3500);
+  }
+}
+
+function locateUser() {
   if (!navigator.geolocation || !mapInstance) {
-    centerOnCity();
+    setLocationStatus('GPS indisponível neste navegador.');
     return;
   }
+  setLocationStatus('Localizando...', true);
   const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
   navigator.geolocation.getCurrentPosition(
-    (position) => updateUserLocation(position, true),
-    () => centerOnCity(),
-    options
-  );
-  if (geoWatchId) {
-    navigator.geolocation.clearWatch(geoWatchId);
-  }
-  geoWatchId = navigator.geolocation.watchPosition(
-    (position) => updateUserLocation(position, false),
-    (error) => console.warn('watchPosition error', error),
+    (position) => {
+      updateUserLocation(position, true);
+      setLocationStatus('Localização encontrada.');
+    },
+    () => setLocationStatus('Não foi possível obter sua localização.'),
     options
   );
 }
@@ -488,18 +517,52 @@ function pickCityFromQuery(cities) {
   }
 }
 
+function getCitySlugFromPath() {
+  const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  if (!rawPath || rawPath.includes('/')) return null;
+  const normalized = decodeURIComponent(rawPath).toLowerCase();
+  const reserved = new Set(['api', 'uploads', 'css', 'js', 'img', 'login', 'painel', 'contato']);
+  if (reserved.has(normalized) || normalized.includes('.')) return null;
+  return normalized;
+}
+
+function pickCityFromPath(cities) {
+  const slug = getCitySlugFromPath();
+  state.citySlugFromPath = slug;
+  if (!slug || !cities?.length) return null;
+  return cities.find(city => city.slug.toLowerCase() === slug) || null;
+}
+
+function pickDefaultService(services) {
+  const list = services || [];
+  return list.find(service => service.slug === 'iluminacao-publica' && service.status === 'active')
+    || list.find(service => service.status === 'active')
+    || null;
+}
+
+function updateCityLinks() {
+  if (!state.city?.slug) return;
+  const cityPath = `/${state.city.slug}`;
+  document.querySelectorAll('a[href="/"]').forEach(link => {
+    link.href = cityPath;
+  });
+}
+
 async function loadConfig() {
   try {
     const res = await fetch('/api/public/config');
     const data = await res.json();
+    const cityFromPath = pickCityFromPath(data.cities);
     const cityFromQuery = pickCityFromQuery(data.cities);
-    state.city = cityFromQuery || data.defaultCity || data.cities?.[0] || null;
-    if (state.city) {
-      centerOnCity();
-    }
+    state.city = cityFromPath || cityFromQuery || data.defaultCity || data.cities?.[0] || null;
     applyBranding(data.branding);
+    updateCityLinks();
     renderServiceSelector(data.services || []);
-    setText('selectedServiceLabel', 'Selecione o serviço para liberar o mapa.');
+    state.autoOpenService = cityFromPath ? pickDefaultService(data.services) : null;
+    setText(
+      'selectedServiceLabel',
+      state.autoOpenService ? 'Mapa carregado para a cidade selecionada.' : 'Selecione o serviço para liberar o mapa.'
+    );
     await loadStatistics();
     updateInlineSummary();
   } catch (error) {
@@ -513,6 +576,8 @@ function setupInteractions() {
   heroButton?.addEventListener('click', attemptReportFlow);
   const inlineBtn = document.getElementById('openReportInline');
   inlineBtn?.addEventListener('click', attemptReportFlow);
+  const locateButton = document.getElementById('locateUserButton');
+  locateButton?.addEventListener('click', locateUser);
 
   document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
   document.getElementById('closeModal').addEventListener('click', closeModal);
@@ -570,6 +635,9 @@ function closeModal() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupInteractions();
-  initMap();
   await loadConfig();
+  initMap();
+  if (state.autoOpenService) {
+    selectService(state.autoOpenService, { scroll: false });
+  }
 });

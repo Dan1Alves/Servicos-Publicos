@@ -101,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const exportBtn = document.getElementById('exportCsv');
   const citySelector = document.getElementById('panelCitySelector');
   const citySwitcher = document.querySelector('.city-switcher');
+  const cityCenterForm = document.getElementById('cityCenterForm');
+  const cityCenterResult = document.getElementById('cityCenterResult');
+  const cityPublicUrl = document.getElementById('cityPublicUrl');
   const filterIds = ['filterBairro', 'filterRua', 'filterStatus', 'filterService', 'filterStart', 'filterEnd'];
 
   panelState.map = L.map('panelMap', { zoomControl: true });
@@ -289,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (citySelector) citySelector.value = panelState.citySlug;
       }
       document.getElementById('panelCity').textContent = data.city ? data.city.name : 'Selecione uma cidade';
+      populateCityCenterForm(data.city);
       fillSelect('filterBairro', data.bairros || [], 'Bairro');
       fillSelect('filterRua', data.ruas || [], 'Rua');
       fillSelect('filterStatus', (data.statuses || []).map((value) => ({ value, label: STATUS_LABELS[value] || value })), 'Status');
@@ -407,6 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bounds.length) {
       const leafletBounds = L.latLngBounds(bounds);
       panelState.map.fitBounds(leafletBounds, { padding: [20, 20] });
+    }
+  }
+
+  function populateCityCenterForm(city) {
+    if (!cityCenterForm || !city) return;
+    cityCenterForm.elements.namedItem('default_lat').value = city.default_lat ?? '';
+    cityCenterForm.elements.namedItem('default_lng').value = city.default_lng ?? '';
+    cityCenterForm.elements.namedItem('default_zoom').value = city.default_zoom ?? 13;
+    if (cityPublicUrl) {
+      const publicPath = `/${city.slug}`;
+      cityPublicUrl.href = `${window.location.origin}${publicPath}`;
+      cityPublicUrl.textContent = publicPath;
     }
   }
 
@@ -643,6 +659,40 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Briefing atualizado com sucesso.');
     } catch (error) {
       alert(error.message || 'Erro ao atualizar identidade.');
+    }
+  });
+
+  cityCenterForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(cityCenterForm).entries());
+    payload.default_lat = Number(payload.default_lat);
+    payload.default_lng = Number(payload.default_lng);
+    payload.default_zoom = Number(payload.default_zoom);
+    if (cityCenterResult) {
+      cityCenterResult.textContent = 'Salvando...';
+    }
+    try {
+      const res = await authFetch(composeUrl('/api/admin/city'), {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      panelState.cityInfo = data.city || panelState.cityInfo;
+      if (panelState.role === 'admin' && data.city) {
+        persistCityLock(data.city);
+      }
+      populateCityCenterForm(panelState.cityInfo);
+      renderMap();
+      if (cityCenterResult) {
+        cityCenterResult.textContent = 'Centro do mapa atualizado.';
+      }
+      await loadCitySelector();
+    } catch (error) {
+      if (cityCenterResult) {
+        cityCenterResult.textContent = error.message || 'Erro ao salvar centro do mapa.';
+      } else {
+        alert(error.message || 'Erro ao salvar centro do mapa.');
+      }
     }
   });
 

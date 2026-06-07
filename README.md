@@ -12,7 +12,7 @@ Plataforma completa (frontend + backend) para gestão urbana com foco inicial em
 
 | Página | URL | Conteúdo |
 | --- | --- | --- |
-| Home / Mapa público | `/` (aceita `?city=slug`) | Modal institucional com seleção de serviço, mapa MapLibre com postes, drawer, modal de denúncia e card de registro abaixo do mapa. |
+| Home / Mapa público | `/` e `/:slug-da-cidade` (também aceita `?city=slug`) | Na URL da cidade, abre direto o mapa MapLibre centralizado no município; o cidadão só compartilha GPS ao clicar em “Ir para minha localização”. |
 | Contato | `/contato` | Canais oficiais e formulário local para registrar interesse. |
 | Login Institucional | `/login` | Tela dedicada de autenticação (Admin/Dev) com redirecionamento automático para o painel após validar o token. |
 | Painel Admin / Dev | `/painel` | Login único, dashboard, filtros, mapa operacional e ferramentas avançadas para Dev. |
@@ -55,6 +55,8 @@ Arquivos-chave:
 `POST /api/login` retorna `{ token, role, city }`. Use `Authorization: Bearer <token>` para acessar `/api/admin/*` (admin/dev) e `/api/dev/*` (apenas dev).
 
 > Cada usuário **Admin** é vinculado a uma única cidade cadastrada pelo Dev. Ao acessar o painel (após se logar em `/login`), ele visualiza somente os chamados daquela prefeitura e o seletor de cidade fica bloqueado. Perfis **Dev** podem alternar livremente entre cidades ativas.
+>
+> O dashboard do painel permite ajustar latitude, longitude e zoom do centro do mapa público da cidade. A URL pública fica no formato `https://dominio/:slug-da-cidade`, por exemplo `/carnaubais`.
 >
 > A aba **Briefing** do painel permite que Admins atualizem rapidamente o nome institucional, título/subtítulo da Home, cores primária/secundária/destaque, fundos do modal de serviços/cartão inline/drawer/modal de denúncia e até o estilo do mapa público, sem depender do time Dev.
 

@@ -540,6 +540,14 @@ function getScopedCity(req) {
   return getCityFromQuery(req.query.city);
 }
 
+function parseNumberInRange(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) {
+    return null;
+  }
+  return number;
+}
+
 function computeResolutionMinutes(createdAt) {
   if (!createdAt) return null;
   const start = new Date(createdAt).getTime();
@@ -782,6 +790,21 @@ app.get('/api/admin/meta', authMiddleware, requireRole('admin'), (req, res) => {
   const city = getScopedCity(req);
   if (!city) return res.status(400).json({ error: 'Cidade nao configurada para este usuario' });
   res.json({ city, ...getFilters(city.id) });
+});
+
+app.patch('/api/admin/city', authMiddleware, requireRole('admin'), (req, res) => {
+  const city = getScopedCity(req);
+  if (!city) return res.status(400).json({ error: 'Cidade nao configurada para este usuario' });
+  const defaultLat = parseNumberInRange(req.body.default_lat, -90, 90);
+  const defaultLng = parseNumberInRange(req.body.default_lng, -180, 180);
+  const defaultZoom = parseNumberInRange(req.body.default_zoom ?? city.default_zoom, 3, 20);
+  if (defaultLat === null || defaultLng === null || defaultZoom === null) {
+    return res.status(400).json({ error: 'Centro do mapa invalido. Informe latitude, longitude e zoom validos.' });
+  }
+  db.prepare('UPDATE cities SET default_lat = ?, default_lng = ?, default_zoom = ? WHERE id = ?')
+    .run(defaultLat, defaultLng, Math.round(defaultZoom), city.id);
+  persistDb();
+  res.json({ ok: true, city: getCityById(city.id) });
 });
 
 app.get('/api/admin/dashboard', authMiddleware, requireRole('admin'), (req, res) => {
@@ -1087,6 +1110,12 @@ clientRoutes.forEach(route => {
   app.get(route.path, (_, res) => {
     res.sendFile(path.join(PUBLIC_DIR, route.file));
   });
+});
+
+app.get('/:citySlug([a-z0-9-]+)', (req, res, next) => {
+  const reserved = new Set(['api', 'uploads', 'css', 'js', 'img', 'login', 'painel', 'contato']);
+  if (reserved.has(req.params.citySlug)) return next();
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.use((err, req, res, next) => {
