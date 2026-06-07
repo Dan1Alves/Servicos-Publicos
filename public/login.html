@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login Institucional • Gestão Urbana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css?v=visual-20260607-2" />
+</head>
+<body class="panel-body">
+  <div class="login-screen">
+    <section class="auth-card">
+      <div>
+        <p class="eyebrow" id="loginEyebrow">Ambiente institucional</p>
+        <h1 id="loginHeading">Painel Gestão Urbana</h1>
+        <p class="muted" id="loginDescription">Use suas credenciais para acessar o painel administrativo da prefeitura.</p>
+      </div>
+      <form id="loginForm">
+        <label for="username">Usuário</label>
+        <input type="text" id="username" name="username" required />
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" required />
+        <button type="submit" class="btn btn-primary submit-btn">Entrar</button>
+      </form>
+      <div class="result" id="loginResult"></div>
+      <a href="/" class="ghost-link" style="text-align:center">↩ Voltar ao portal</a>
+    </section>
+  </div>
+  <script src="/js/login.js" defer></script>
+</body>
+</html>

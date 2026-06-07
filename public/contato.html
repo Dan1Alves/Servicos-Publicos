@@ -1,0 +1,64 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contato • Gestão Urbana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css?v=visual-20260607-2" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="page-shell header-content">
+      <div class="brand">Gestão Urbana</div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/contato">Contato</a>
+        <a href="/painel">Painel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell contact-layout">
+    <section class="panel-card">
+      <h1>Canais oficiais</h1>
+      <p>Entre em contato com a central da Secretaria Municipal de Serviços Públicos para dúvidas institucionais, liberação de novos serviços ou integração de cidades adicionais.</p>
+      <ul>
+        <li><strong>E-mail:</strong> gestaourbana@prefeitura.gov.br</li>
+        <li><strong>Telefone:</strong> 0800-000-2026 (24/7)</li>
+        <li><strong>WhatsApp institucional:</strong> +55 11 99999-0000 (ativação futura com API oficial)</li>
+      </ul>
+    </section>
+
+    <section class="panel-card">
+      <h2>Envie uma mensagem</h2>
+      <form id="contactForm">
+        <label for="name">Nome</label>
+        <input type="text" id="name" name="name" required />
+        <label for="email">E-mail</label>
+        <input type="text" id="email" name="email" required />
+        <label for="message">Mensagem</label>
+        <textarea id="message" name="message" required></textarea>
+        <button class="btn btn-primary" type="submit">Registrar interesse</button>
+      </form>
+      <div class="result" id="contactResult"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page-shell footer-inner">
+      Contato institucional direto com a prefeitura para expansão do projeto.
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('contactForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      document.getElementById('contactResult').textContent = 'Mensagem registrada localmente. Configure integração com e-mail/CRM no futuro.';
+      event.target.reset();
+    });
+  </script>
+</body>
+</html>

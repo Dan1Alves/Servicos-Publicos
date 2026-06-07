@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel Institucional • Gestão Urbana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/css/style.css?v=visual-20260607-2" />
+</head>
+<body class="panel-body">
+  <div class="panel-app" id="panelApp" hidden>
+    <aside class="panel-sidebar">
+      <div class="sidebar-brand">
+        <p class="eyebrow">Gestão urbana</p>
+        <strong>Painel institucional</strong>
+      </div>
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button type="button" class="sidebar-link active" data-view="dashboard">Visão geral</button>
+        <button type="button" class="sidebar-link" data-view="reports">Chamados</button>
+        <button type="button" class="sidebar-link dev-only" data-view="briefing">Briefing</button>
+        <button type="button" class="sidebar-link dev-only" data-view="dev">Ferramentas Dev</button>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Perfil: <span id="userRoleLabel">--</span></small>
+      </div>
+    </aside>
+
+    <div class="panel-main">
+      <header class="panel-header">
+        <div class="panel-header-inner">
+          <div>
+            <p class="eyebrow">Ambiente institucional</p>
+            <h1>Painel Gestão Urbana</h1>
+          </div>
+          <div class="panel-header-actions">
+            <a href="/" class="ghost-link">↩ Voltar ao portal</a>
+            <button type="button" id="logoutButton" class="btn btn-outline">Sair</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="panel-shell">
+        <section class="panel-view active" data-view="dashboard">
+          <section class="dashboard-grid" id="panelContent">
+            <article class="panel-card dashboard-card">
+              <div class="dashboard-head">
+                <div>
+                  <p class="eyebrow">Cidade monitorada</p>
+                  <h2 id="panelCity">--</h2>
+                </div>
+                <div class="city-switcher">
+                  <label for="panelCitySelector">Cidade</label>
+                  <select id="panelCitySelector"></select>
+                </div>
+              </div>
+              <div class="stats-grid" id="panelStats"></div>
+            </article>
+            <article class="panel-card map-card">
+              <div class="panel-card-head">
+                <div>
+                  <p class="eyebrow">Operação em campo</p>
+                  <h2>Mapa operacional</h2>
+                </div>
+                <small class="muted">Pontos coloridos conforme status</small>
+              </div>
+              <div class="map-panel" id="panelMap"></div>
+            </article>
+          </section>
+        </section>
+
+        <section class="panel-view" data-view="reports">
+          <section class="panel-card reports-hub" id="filtersSection">
+            <div class="reports-head">
+              <div>
+                <p class="eyebrow">Fila de atendimento</p>
+                <h2>Chamados recentes</h2>
+              </div>
+              <div class="reports-actions">
+                <button class="btn btn-outline" id="exportCsv">Exportar CSV</button>
+              </div>
+            </div>
+            <div class="filters">
+              <div>
+                <label for="filterBairro">Bairro</label>
+                <select id="filterBairro"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label for="filterRua">Rua</label>
+                <select id="filterRua"><option value="">Todas</option></select>
+              </div>
+              <div>
+                <label for="filterStatus">Status</label>
+                <select id="filterStatus"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label for="filterService">Serviço</label>
+                <select id="filterService"><option value="">Todos</option></select>
+              </div>
+              <div>
+                <label for="filterStart">Data inicial</label>
+                <input type="date" id="filterStart" />
+              </div>
+              <div>
+                <label for="filterEnd">Data final</label>
+                <input type="date" id="filterEnd" />
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table id="reportsTable">
+                <thead>
+                  <tr>
+                    <th>Protocolo</th>
+                    <th>Bairro/Rua</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Atualizar</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel-view dev-only" data-view="briefing">
+          <section class="panel-card briefing-card">
+            <div class="panel-card-head">
+              <div>
+                <p class="eyebrow">Identidade institucional</p>
+                <h2>Briefing da plataforma</h2>
+              </div>
+              <small class="muted">Atualize textos oficiais e cores primárias exibidas no portal.</small>
+            </div>
+            <form id="brandingForm" class="branding-form">
+              <div class="form-section">
+                <h3>Identidade</h3>
+                <label for="organization">Nome da organização</label>
+                <input type="text" name="organization" id="organization" placeholder="Secretaria Municipal de Serviços Públicos" />
+
+                <label for="cityName">Cidade exibida no topo</label>
+                <input type="text" name="cityName" id="cityName" placeholder="Prefeitura Municipal de Ipanguaçu" />
+
+                <label for="heroTitle">Título da Home</label>
+                <input type="text" name="heroTitle" id="heroTitle" placeholder="Gestão Urbana Integrada" />
+
+                <label for="heroSubtitle">Subtítulo</label>
+                <textarea name="heroSubtitle" id="heroSubtitle" placeholder="Mensagem institucional exibida na home"></textarea>
+
+                <label for="heroNote">Nota institucional</label>
+                <textarea name="heroNote" id="heroNote" placeholder="Texto destacado acima dos indicadores públicos."></textarea>
+
+                <label for="heroHighlights">Destaques (separe por vírgula)</label>
+                <input type="text" name="heroHighlights" id="heroHighlights" placeholder="Mapa em tempo real, Atendimento ágil, Transparência ativa" />
+              </div>
+
+              <div class="form-section">
+                <h3>Call-to-action do mapa</h3>
+                <div class="two-column">
+                  <div>
+                    <label for="inlineHelperText">Texto de orientação</label>
+                    <input type="text" name="inlineHelperText" id="inlineHelperText" placeholder="Escolha um poste no mapa e clique em “Preencher denúncia”." />
+                  </div>
+                  <div>
+                    <label for="inlineButtonText">Texto do botão</label>
+                    <input type="text" name="inlineButtonText" id="inlineButtonText" placeholder="Preencher denúncia" />
+                  </div>
+                </div>
+                <div class="two-column">
+                  <div>
+                    <label for="heroCtaText">Call-to-action extra</label>
+                    <input type="text" name="heroCtaText" id="heroCtaText" placeholder="Ver estatísticas completas" />
+                  </div>
+                  <div>
+                    <label for="heroCtaLink">Link do CTA</label>
+                    <input type="text" name="heroCtaLink" id="heroCtaLink" placeholder="https://prefeitura.gov.br/relatorios" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Seletor de serviços</h3>
+            <label for="serviceModalTitle">Título do modal</label>
+            <input type="text" name="serviceModalTitle" id="serviceModalTitle" placeholder="Escolha um serviço para iniciar" />
+
+            <label for="serviceModalSubtitle">Subtítulo</label>
+            <textarea name="serviceModalSubtitle" id="serviceModalSubtitle" placeholder="Somente Iluminação Pública está liberada. Os demais módulos chegarão em breve."></textarea>
+
+            <div class="two-column">
+              <div>
+                <label for="serviceModalOverlay">Fundo da sobreposição (rgba/gradiente)</label>
+                <input type="text" name="serviceModalOverlay" id="serviceModalOverlay" placeholder="rgba(5, 12, 24, 0.65)" />
+              </div>
+              <div>
+                <label for="serviceModalBackground">Fundo do cartão</label>
+                <input type="color" name="serviceModalBackground" id="serviceModalBackground" value="#ffffff" />
+              </div>
+            </div>
+
+            <label for="serviceModalBorderColor">Borda do cartão</label>
+            <input type="text" name="serviceModalBorderColor" id="serviceModalBorderColor" placeholder="rgba(8, 15, 26, 0.08)" />
+          </div>
+
+          <div class="form-section">
+            <h3>Cartão inline e drawer</h3>
+            <label for="inlineCardTitle">Título exibido no cartão</label>
+            <input type="text" name="inlineCardTitle" id="inlineCardTitle" placeholder="Poste selecionado" />
+
+            <label for="inlineEmptyText">Mensagem quando nenhum poste está selecionado</label>
+            <input type="text" name="inlineEmptyText" id="inlineEmptyText" placeholder="Nenhum poste selecionado" />
+
+            <label for="inlineCardBackground">Fundo do cartão (rgba/gradiente)</label>
+            <input type="text" name="inlineCardBackground" id="inlineCardBackground" placeholder="rgba(255, 255, 255, 0.12)" />
+
+            <label for="inlineCardBorder">Borda do cartão</label>
+            <input type="text" name="inlineCardBorder" id="inlineCardBorder" placeholder="rgba(255, 255, 255, 0.3)" />
+
+            <div class="two-column">
+              <div>
+                <label for="inlineCardTextColor">Cor do texto principal</label>
+                <input type="color" name="inlineCardTextColor" id="inlineCardTextColor" value="#ffffff" />
+              </div>
+              <div>
+                <label for="inlineCardMutedColor">Cor do texto auxiliar</label>
+                <input type="text" name="inlineCardMutedColor" id="inlineCardMutedColor" placeholder="rgba(255, 255, 255, 0.75)" />
+              </div>
+            </div>
+
+            <label for="inlineCardButtonBorder">Cor/borda do botão</label>
+            <input type="text" name="inlineCardButtonBorder" id="inlineCardButtonBorder" placeholder="rgba(255, 255, 255, 0.65)" />
+
+            <label for="drawerTipText">Texto do drawer (orientação)</label>
+            <textarea name="drawerTipText" id="drawerTipText" placeholder='Selecione "Reportar problema" para registrar a ocorrência.'></textarea>
+
+            <div class="two-column">
+              <div>
+                <label for="drawerBackground">Fundo do drawer</label>
+                <input type="color" name="drawerBackground" id="drawerBackground" value="#ffffff" />
+              </div>
+              <div>
+                <label for="drawerTextColor">Cor do texto do drawer</label>
+                <input type="color" name="drawerTextColor" id="drawerTextColor" value="#0f253c" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Modal de denúncia</h3>
+            <label for="reportModalTitle">Título do modal</label>
+            <input type="text" name="reportModalTitle" id="reportModalTitle" placeholder="Registrar iluminação pública" />
+
+            <label for="reportModalDescription">Descrição padrão do modal</label>
+            <textarea name="reportModalDescription" id="reportModalDescription" placeholder="Selecione um poste no mapa para preencher os dados automaticamente."></textarea>
+
+            <label for="reportSubmitLabel">Texto do botão principal</label>
+            <input type="text" name="reportSubmitLabel" id="reportSubmitLabel" placeholder="Enviar denúncia" />
+
+            <div class="two-column">
+              <div>
+                <label for="modalBackground">Fundo do modal</label>
+                <input type="color" name="modalBackground" id="modalBackground" value="#ffffff" />
+              </div>
+              <div>
+                <label for="modalTextColor">Cor do texto</label>
+                <input type="color" name="modalTextColor" id="modalTextColor" value="#0f253c" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Cores & fundos</h3>
+             <div class="color-grid">
+              <div>
+                <label for="primaryColor">Cor primária</label>
+                    <input type="color" name="primaryColor" id="primaryColor" value="#0b1f33" />
+                  </div>
+                  <div>
+                    <label for="secondaryColor">Cor secundária</label>
+                    <input type="color" name="secondaryColor" id="secondaryColor" value="#1f3b57" />
+                  </div>
+                  <div>
+                    <label for="accentColor">Cor de destaque</label>
+                    <input type="color" name="accentColor" id="accentColor" value="#e6ecf5" />
+                  </div>
+                  <div>
+                    <label for="pageBackground">Fundo do portal</label>
+                    <input type="color" name="pageBackground" id="pageBackground" value="#f4f6fb" />
+                  </div>
+                  <div>
+                    <label for="heroBackground">Fundo da hero (CSS/gradiente)</label>
+                    <input type="text" name="heroBackground" id="heroBackground" placeholder="linear-gradient(135deg,#0b253f,#1c3b61)" />
+                  </div>
+                  <div>
+                  <label for="loginBackground">Fundo do login</label>
+                  <input type="text" name="loginBackground" id="loginBackground" placeholder="#0f253c" />
+                </div>
+              </div>
+            </div>
+
+          <div class="form-section">
+            <h3>Mapa e integrações</h3>
+            <label for="mapStyleUrl">URL do estilo MapLibre (GL JSON)</label>
+            <input type="text" name="mapStyleUrl" id="mapStyleUrl" placeholder="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json" />
+          </div>
+
+          <div class="form-section">
+            <h3>Imagens</h3>
+                <div class="two-column">
+                  <div>
+                    <label for="heroImage">Imagem da hero (URL)</label>
+                    <input type="text" name="heroImage" id="heroImage" placeholder="https://cdn.prefeitura.gov.br/hero.jpg" />
+                  </div>
+                  <div>
+                    <label for="loginImage">Imagem do login (URL)</label>
+                    <input type="text" name="loginImage" id="loginImage" placeholder="https://cdn.prefeitura.gov.br/login.jpg" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3>Conteúdo institucional</h3>
+                <label for="aboutText">Texto “Sobre o sistema”</label>
+                <textarea name="aboutText" id="aboutText" placeholder="Descrição institucional da plataforma."></textarea>
+
+                <label for="transparencyText">Texto “Transparência”</label>
+                <textarea name="transparencyText" id="transparencyText" placeholder="Compromissos de transparência e dados públicos."></textarea>
+              </div>
+
+              <div class="form-section">
+                <h3>Contato e rodapé</h3>
+                <div class="two-column">
+                  <div>
+                    <label for="contactEmail">E-mail institucional</label>
+                    <input type="email" name="contact_email" id="contactEmail" placeholder="gestaourbana@prefeitura.gov.br" />
+                  </div>
+                  <div>
+                    <label for="contactPhone">Telefone</label>
+                    <input type="text" name="contact_phone" id="contactPhone" placeholder="0800-000-2026" />
+                  </div>
+                </div>
+                <label for="contactWhatsapp">WhatsApp</label>
+                <input type="text" name="contact_whatsapp" id="contactWhatsapp" placeholder="+55 84 99999-0000" />
+
+                <label for="footerNote">Rodapé do portal</label>
+                <textarea name="footerNote" id="footerNote" placeholder="Secretaria Municipal de Serviços Públicos • suporte@prefeitura.gov.br • 0800-000-2026"></textarea>
+              </div>
+
+              <div class="form-footer">
+                <button class="btn btn-primary" type="submit">Salvar briefing</button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <section class="panel-view" data-view="dev">
+          <section class="panel-card dev-panels" id="devTools">
+            <div class="panel-card-head">
+              <p class="eyebrow">Suíte avançada</p>
+              <h2>Ferramentas Dev</h2>
+            </div>
+            <details open>
+              <summary>Postes</summary>
+              <form id="postForm">
+                <input type="text" name="city_slug" placeholder="Slug da cidade" required />
+                <input type="text" name="post_uid" placeholder="ID do poste" required />
+                <input type="text" name="rua" placeholder="Rua" required />
+                <input type="text" name="bairro" placeholder="Bairro" required />
+                <input type="number" step="any" name="lat" placeholder="Latitude" required />
+                <input type="number" step="any" name="lng" placeholder="Longitude" required />
+                <div class="form-footer"><button class="btn btn-primary">Cadastrar poste</button></div>
+              </form>
+              <div class="table-wrap" style="margin-top:1rem">
+                <table id="postsTable">
+                  <thead><tr><th>UID</th><th>Cidade</th><th>Bairro</th><th>Lat</th><th>Lng</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </details>
+
+            <details>
+              <summary>Serviços</summary>
+              <form id="serviceForm">
+                <input type="text" name="name" placeholder="Nome" required />
+                <input type="text" name="slug" placeholder="Slug" required />
+                <input type="text" name="description" placeholder="Descrição" />
+                <select name="status">
+                  <option value="active">Ativo</option>
+                  <option value="upcoming">Em breve</option>
+                  <option value="disabled">Desativado</option>
+                </select>
+                <input type="number" name="order_index" placeholder="Ordem" />
+                <div class="form-footer"><button class="btn btn-primary">Salvar serviço</button></div>
+              </form>
+              <ul class="list" id="servicesList"></ul>
+            </details>
+
+            <details>
+              <summary>Cidades e usuários</summary>
+              <form id="cityForm">
+                <input type="text" name="name" placeholder="Nome" required />
+                <input type="text" name="slug" placeholder="Slug" required />
+                <input type="number" step="any" name="default_lat" placeholder="Latitude" required />
+                <input type="number" step="any" name="default_lng" placeholder="Longitude" required />
+                <input type="number" name="default_zoom" placeholder="Zoom" />
+                <div class="form-footer"><button class="btn btn-primary">Adicionar cidade</button></div>
+              </form>
+              <form id="userForm" style="margin-top:1rem">
+                <input type="text" name="username" placeholder="Usuário" required />
+                <input type="password" name="password" placeholder="Senha" required />
+                <select name="role">
+                  <option value="admin">Admin</option>
+                  <option value="dev">Dev</option>
+                </select>
+                <select name="city_slug" id="userCitySelect">
+                  <option value="">Selecione a cidade (obrigatório para Admin)</option>
+                </select>
+                <div class="form-footer"><button class="btn btn-primary">Criar usuário</button></div>
+              </form>
+            </details>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <footer id="panelFooter" hidden>
+    Ambiente institucional • acesso restrito.
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/painel.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestão Urbana • Iluminação Pública</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="/css/style.css?v=visual-20260607-2" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="page-shell header-content">
+      <div class="brand" id="brandName">Gestão Urbana</div>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/contato">Contato</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="service-modal" id="serviceModal">
+      <div class="service-modal-content">
+        <div class="service-modal-header">
+          <p class="eyebrow">Plataforma oficial</p>
+          <h2 id="serviceModalTitle">Escolha um serviço para iniciar</h2>
+          <p class="muted" id="serviceModalSubtitle">Somente Iluminação Pública está liberada. Os demais módulos chegarão em breve.</p>
+        </div>
+        <div class="service-modal-cards" id="serviceCards"></div>
+      </div>
+    </section>
+
+    <section class="hero hidden" id="mapSection">
+      <div class="page-shell hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow" id="heroCity">Prefeitura Municipal</p>
+          <h1 id="heroTitle">Gestão Urbana Integrada</h1>
+          <p id="heroSubtitle">Monitoramento institucional da iluminação pública com diagnóstico em tempo real.</p>
+          <div class="hero-actions">
+            <small class="muted" id="selectedServiceLabel">Selecione o serviço para liberar o mapa.</small>
+          </div>
+          <div class="hero-stats">
+            <article>
+              <span>Total</span>
+              <strong id="statTotal">--</strong>
+            </article>
+            <article>
+              <span>Abertos</span>
+              <strong id="statOpen">--</strong>
+            </article>
+            <article>
+              <span>Em andamento</span>
+              <strong id="statProgress">--</strong>
+            </article>
+            <article>
+              <span>Resolvidos</span>
+              <strong id="statClosed">--</strong>
+            </article>
+          </div>
+          <div class="inline-report">
+            <span class="muted label" id="inlineTitle">Poste selecionado</span>
+            <strong id="selectedPostInline">Nenhum poste selecionado</strong>
+            <small class="muted" id="inlineHelper">Escolha um poste no mapa e clique em “Preencher denúncia”.</small>
+            <button class="btn btn-outline" id="openReportInline">Preencher denúncia</button>
+          </div>
+        </div>
+        <div class="hero-map">
+          <div id="map"></div>
+        </div>
+      </div>
+    </section>
+    <section class="page-shell hero-note hidden" id="heroNote">
+      <p class="muted" id="heroNoteText">Indicadores detalhados ficam disponíveis apenas no painel institucional.</p>
+      <small class="muted" id="statsUpdated"></small>
+      <ul class="hero-highlights" id="heroHighlights"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page-shell footer-inner" id="contactInfo">
+      Secretaria Municipal de Serviços Públicos • suporte@prefeitura.gov.br • 0800-000-2026
+    </div>
+  </footer>
+
+  <div class="drawer" id="postDrawer">
+    <header>
+      <div>
+        <strong id="drawerPostId">Poste</strong>
+        <div class="muted" id="drawerPostAddress"></div>
+      </div>
+      <button class="close" id="closeDrawer" aria-label="Fechar">×</button>
+    </header>
+    <p class="drawer-tip" id="drawerTip">Selecione “Reportar problema” para registrar a ocorrência. As coordenadas são capturadas automaticamente.</p>
+    <button class="btn btn-primary" id="drawerReportButton">Reportar problema</button>
+  </div>
+
+  <div class="modal" id="reportModal">
+    <div class="modal-content">
+      <h3 id="reportModalTitle">Registrar iluminação pública</h3>
+      <p class="muted" id="reportModalDescription">Selecione um poste no mapa para preencher os dados automaticamente.</p>
+      <p class="muted" id="reportPostSummary">Selecione um poste no mapa para preencher os dados automaticamente.</p>
+      <form id="reportForm">
+        <input type="hidden" name="service_slug" id="reportServiceSlug" />
+        <input type="hidden" name="post_id" id="reportPostId" />
+        <input type="hidden" name="browser_lat" id="reportLat" />
+        <input type="hidden" name="browser_lng" id="reportLng" />
+        <label for="type">Tipo de problema</label>
+        <select name="type" id="type" required>
+          <option value="Lampada queimada">Lâmpada queimada</option>
+          <option value="Piscando">Piscando</option>
+          <option value="Poste danificado">Poste danificado</option>
+          <option value="Outros">Outros</option>
+        </select>
+        <label for="description">Descrição (opcional)</label>
+        <textarea name="description" id="description" placeholder="Detalhe o que está acontecendo"></textarea>
+        <label for="image">Foto (opcional)</label>
+        <input type="file" name="image" id="image" accept="image/*" />
+        <button type="submit" class="btn btn-primary submit-btn" id="reportSubmitButton">Enviar denúncia</button>
+      </form>
+      <div class="result" id="reportResult"></div>
+      <button class="btn btn-outline close-btn" id="closeModal">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
+  <script src="/js/portal.js?v=visual-20260607-2" defer></script>
+</body>
+</html>
