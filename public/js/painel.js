@@ -10,6 +10,7 @@ const panelState = {
   citySlug: null,
   lockedCity: null,
   cityInfo: null,
+  setupRequired: false,
   cities: [],
   reports: [],
   map: null,
@@ -104,6 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const cityCenterForm = document.getElementById('cityCenterForm');
   const cityCenterResult = document.getElementById('cityCenterResult');
   const cityPublicUrl = document.getElementById('cityPublicUrl');
+  const citySetupModal = document.getElementById('citySetupModal');
+  const citySetupForm = document.getElementById('citySetupForm');
+  const citySetupResult = document.getElementById('citySetupResult');
   const filterIds = ['filterBairro', 'filterRua', 'filterStatus', 'filterService', 'filterStart', 'filterEnd'];
 
   panelState.map = L.map('panelMap', { zoomControl: true });
@@ -236,6 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/public/config');
       const data = await res.json();
       panelState.cities = data.cities || [];
+      const selectedExists = panelState.cities.some((city) => city.slug === panelState.citySlug);
+      if (panelState.citySlug && !selectedExists && !panelState.lockedCity) {
+        panelState.citySlug = data.defaultCity?.slug || panelState.cities[0]?.slug || null;
+      }
       if (panelState.lockedCity?.slug) {
         const match = panelState.cities.find((city) => city.slug === panelState.lockedCity.slug);
         if (match) {
@@ -293,6 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       document.getElementById('panelCity').textContent = data.city ? data.city.name : 'Selecione uma cidade';
       populateCityCenterForm(data.city);
+      panelState.setupRequired = Boolean(data.setupRequired);
+      toggleCitySetup(panelState.setupRequired, data.city);
       fillSelect('filterBairro', data.bairros || [], 'Bairro');
       fillSelect('filterRua', data.ruas || [], 'Rua');
       fillSelect('filterStatus', (data.statuses || []).map((value) => ({ value, label: STATUS_LABELS[value] || value })), 'Status');
@@ -416,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function populateCityCenterForm(city) {
     if (!cityCenterForm || !city) return;
+    cityCenterForm.elements.namedItem('name').value = city.name || '';
     cityCenterForm.elements.namedItem('default_lat').value = city.default_lat ?? '';
     cityCenterForm.elements.namedItem('default_lng').value = city.default_lng ?? '';
     cityCenterForm.elements.namedItem('default_zoom').value = city.default_zoom ?? 13;
@@ -423,6 +434,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const publicPath = `/${city.slug}`;
       cityPublicUrl.href = `${window.location.origin}${publicPath}`;
       cityPublicUrl.textContent = publicPath;
+    }
+  }
+
+  function populateCitySetupForm(city) {
+    if (!citySetupForm || !city) return;
+    citySetupForm.elements.namedItem('name').value = city.name || '';
+    citySetupForm.elements.namedItem('default_lat').value = city.default_lat ?? '';
+    citySetupForm.elements.namedItem('default_lng').value = city.default_lng ?? '';
+    citySetupForm.elements.namedItem('default_zoom').value = city.default_zoom ?? 13;
+  }
+
+  function toggleCitySetup(shouldShow, city) {
+    if (!citySetupModal || panelState.role !== 'admin') return;
+    if (shouldShow && city) {
+      populateCitySetupForm(city);
+      citySetupModal.removeAttribute('hidden');
+      document.body.classList.add('setup-open');
+    } else {
+      citySetupModal.setAttribute('hidden', '');
+      document.body.classList.remove('setup-open');
     }
   }
 
@@ -471,6 +502,48 @@ document.addEventListener('DOMContentLoaded', () => {
     return new Date(value).toLocaleString('pt-BR');
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[char]);
+  }
+
+  async function saveCitySettings(form, resultEl, successMessage) {
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.name = String(payload.name || '').trim();
+    payload.default_lat = Number(payload.default_lat);
+    payload.default_lng = Number(payload.default_lng);
+    payload.default_zoom = Number(payload.default_zoom);
+    if (resultEl) {
+      resultEl.textContent = 'Salvando...';
+    }
+    const res = await authFetch(composeUrl('/api/admin/city'), {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    panelState.cityInfo = data.city || panelState.cityInfo;
+    panelState.setupRequired = Boolean(data.setupRequired);
+    if (panelState.role === 'admin' && data.city) {
+      persistCityLock(data.city);
+      panelState.citySlug = data.city.slug;
+    }
+    document.getElementById('panelCity').textContent = panelState.cityInfo?.name || 'Selecione uma cidade';
+    populateCityCenterForm(panelState.cityInfo);
+    populateCitySetupForm(panelState.cityInfo);
+    renderMap();
+    toggleCitySetup(panelState.setupRequired, panelState.cityInfo);
+    if (resultEl) {
+      resultEl.textContent = successMessage;
+    }
+    await loadCitySelector();
+    return data;
+  }
+
   // -------- Ferramentas Dev --------
   const postForm = document.getElementById('postForm');
   const postsTableBody = document.querySelector('#postsTable tbody');
@@ -481,6 +554,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const userForm = document.getElementById('userForm');
   const userCitySelect = document.getElementById('userCitySelect');
   const userRoleSelect = userForm?.querySelector('select[name="role"]');
+  const citiesTableBody = document.querySelector('#citiesTable tbody');
+  const usersTableBody = document.querySelector('#usersTable tbody');
 
   function populateBrandingForm(branding) {
     if (!brandingForm || !branding) return;
@@ -581,6 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadDevData() {
     fetchPosts();
     fetchServices();
+    fetchCities();
+    fetchUsers();
   }
 
   async function fetchPosts() {
@@ -610,6 +687,109 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  async function fetchCities() {
+    if (!citiesTableBody) return;
+    try {
+      const res = await authFetch('/api/dev/cities');
+      const cities = await res.json();
+      citiesTableBody.innerHTML = '';
+      if (!cities.length) {
+        citiesTableBody.innerHTML = '<tr><td colspan="5">Nenhuma cidade cadastrada.</td></tr>';
+        return;
+      }
+      cities.forEach((city) => {
+        const tr = document.createElement('tr');
+        const center = `${city.default_lat}, ${city.default_lng} / z${city.default_zoom || 13}`;
+        tr.innerHTML = `
+          <td>${escapeHtml(city.name)}</td>
+          <td>${escapeHtml(city.slug)}</td>
+          <td>${escapeHtml(center)}</td>
+          <td>${Number(city.active) === 1 ? 'Ativa' : 'Inativa'}</td>
+          <td class="table-actions">
+            <button type="button" class="btn btn-danger" data-delete-city="${city.id}" data-city-name="${escapeHtml(city.name)}">Apagar</button>
+          </td>`;
+        citiesTableBody.appendChild(tr);
+      });
+      citiesTableBody.querySelectorAll('button[data-delete-city]').forEach((button) => {
+        button.addEventListener('click', handleDeleteCity);
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function fetchUsers() {
+    if (!usersTableBody) return;
+    try {
+      const res = await authFetch('/api/dev/users');
+      const users = await res.json();
+      usersTableBody.innerHTML = '';
+      if (!users.length) {
+        usersTableBody.innerHTML = '<tr><td colspan="5">Nenhum usuario cadastrado.</td></tr>';
+        return;
+      }
+      users.forEach((user) => {
+        const setupLabel = user.role === 'admin'
+          ? (Number(user.city_setup_completed) === 1 ? 'Configurada' : 'Primeiro acesso pendente')
+          : 'Global';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(user.username)}</td>
+          <td>${escapeHtml(user.role)}<br><small>${setupLabel}</small></td>
+          <td>${escapeHtml(user.city_name || '--')}</td>
+          <td>${formatDate(user.created_at)}</td>
+          <td class="table-actions">
+            <button type="button" class="btn btn-danger" data-delete-user="${user.id}" data-username="${escapeHtml(user.username)}">Apagar</button>
+          </td>`;
+        usersTableBody.appendChild(tr);
+      });
+      usersTableBody.querySelectorAll('button[data-delete-user]').forEach((button) => {
+        button.addEventListener('click', handleDeleteUser);
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleDeleteCity(event) {
+    const button = event.currentTarget;
+    const id = button.getAttribute('data-delete-city');
+    const cityName = button.getAttribute('data-city-name') || 'esta cidade';
+    const ok = window.confirm(`Apagar ${cityName}? Isso remove usuarios admin, chamados, postes e bairros vinculados a ela.`);
+    if (!ok) return;
+    try {
+      button.disabled = true;
+      await authFetch(`/api/dev/cities/${id}`, { method: 'DELETE' });
+      await loadCitySelector();
+      if (!panelState.citySlug && panelState.cities.length) {
+        panelState.citySlug = panelState.cities[0].slug;
+      }
+      refreshDashboard();
+      fetchCities();
+      fetchUsers();
+      fetchPosts();
+    } catch (error) {
+      button.disabled = false;
+      alert(error.message || 'Erro ao apagar cidade.');
+    }
+  }
+
+  async function handleDeleteUser(event) {
+    const button = event.currentTarget;
+    const id = button.getAttribute('data-delete-user');
+    const username = button.getAttribute('data-username') || 'este usuario';
+    const ok = window.confirm(`Apagar o acesso ${username}?`);
+    if (!ok) return;
+    try {
+      button.disabled = true;
+      await authFetch(`/api/dev/users/${id}`, { method: 'DELETE' });
+      fetchUsers();
+    } catch (error) {
+      button.disabled = false;
+      alert(error.message || 'Erro ao apagar usuario.');
     }
   }
 
@@ -664,34 +844,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   cityCenterForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const payload = Object.fromEntries(new FormData(cityCenterForm).entries());
-    payload.default_lat = Number(payload.default_lat);
-    payload.default_lng = Number(payload.default_lng);
-    payload.default_zoom = Number(payload.default_zoom);
-    if (cityCenterResult) {
-      cityCenterResult.textContent = 'Salvando...';
-    }
     try {
-      const res = await authFetch(composeUrl('/api/admin/city'), {
-        method: 'PATCH',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      panelState.cityInfo = data.city || panelState.cityInfo;
-      if (panelState.role === 'admin' && data.city) {
-        persistCityLock(data.city);
-      }
-      populateCityCenterForm(panelState.cityInfo);
-      renderMap();
-      if (cityCenterResult) {
-        cityCenterResult.textContent = 'Centro do mapa atualizado.';
-      }
-      await loadCitySelector();
+      await saveCitySettings(cityCenterForm, cityCenterResult, 'Dados da cidade atualizados.');
     } catch (error) {
       if (cityCenterResult) {
-        cityCenterResult.textContent = error.message || 'Erro ao salvar centro do mapa.';
+        cityCenterResult.textContent = error.message || 'Erro ao salvar dados da cidade.';
       } else {
-        alert(error.message || 'Erro ao salvar centro do mapa.');
+        alert(error.message || 'Erro ao salvar dados da cidade.');
+      }
+    }
+  });
+
+  citySetupForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      await saveCitySettings(citySetupForm, citySetupResult, 'Cidade configurada com sucesso.');
+      refreshDashboard();
+    } catch (error) {
+      if (citySetupResult) {
+        citySetupResult.textContent = error.message || 'Erro ao configurar cidade.';
+      } else {
+        alert(error.message || 'Erro ao configurar cidade.');
       }
     }
   });
@@ -704,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cityForm.reset();
       await loadCitySelector();
       refreshDashboard();
+      fetchCities();
     } catch (error) {
       alert(error.message || 'Erro ao cadastrar cidade.');
     }
@@ -716,6 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await authFetch('/api/dev/users', { method: 'POST', body: JSON.stringify(body) });
       userForm.reset();
       syncUserCityRequirement();
+      fetchUsers();
       alert('Usuário criado com sucesso.');
     } catch (error) {
       alert(error.message || 'Erro ao criar usuário.');

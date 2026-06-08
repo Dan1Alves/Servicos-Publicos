@@ -55,7 +55,7 @@ Arquivos-chave:
 
 `POST /api/login` retorna `{ token, role, city }`. Use `Authorization: Bearer <token>` para acessar `/api/admin/*` (admin/dev) e `/api/dev/*` (apenas dev).
 
-> Cada usuário **Admin** é vinculado a uma única cidade cadastrada pelo Dev. Ao acessar o painel (após se logar em `/login`), ele visualiza somente os chamados daquela prefeitura e o seletor de cidade fica bloqueado. Perfis **Dev** podem alternar livremente entre cidades ativas.
+> Cada usuário **Admin** é vinculado a uma única cidade cadastrada pelo Dev. No primeiro acesso, o Admin deve confirmar o nome oficial da cidade e informar latitude, longitude e zoom do centro do mapa. Depois disso, ele visualiza somente os chamados daquela prefeitura e o seletor de cidade fica bloqueado. Perfis **Dev** podem alternar livremente entre cidades ativas.
 >
 > O dashboard do painel permite ajustar latitude, longitude e zoom do centro do mapa público da cidade. A URL pública fica no formato `https://dominio/:slug-da-cidade`, por exemplo `/carnaubais`.
 >
@@ -69,17 +69,18 @@ Arquivos-chave:
   - `GET /api/public/statistics?city=slug` — totais, status, média de resolução, hotspots e protocolos recentes.
   - `POST /api/report` — registro de denúncias (gera protocolo, salva IP/coords/imagem, anexa histórico).
 - **Admin (Prefeitura)**
-  - `GET /api/admin/meta` — filtros dinamicamente preenchidos (bairros, ruas, status, serviços).
+  - `GET /api/admin/meta` — filtros dinamicamente preenchidos (bairros, ruas, status, serviços) e aviso de primeiro acesso pendente.
   - `GET /api/admin/dashboard` — indicadores consolidados + séries mensais.
   - `GET /api/admin/reports` — lista filtrável com dados completos, incluindo coordenadas do poste.
+  - `PATCH /api/admin/city` — atualiza nome da cidade, latitude, longitude e zoom do mapa público da prefeitura vinculada ao Admin.
   - `PATCH /api/admin/reports/:id` — alteração de status + observação (atualiza histórico e resolved_at).
   - `GET /api/admin/export` — CSV com respeito aos filtros aplicados.
 - **Dev (Super Admin)**
   - CRUD de postes: `GET/POST /api/dev/posts`, `PUT/DELETE /api/dev/posts/:id`.
   - Cadastro de serviços: `GET/POST /api/dev/services`, `PATCH /api/dev/services/:id` (status, ordem, descrição, “em breve”, etc.).
   - Identidade institucional: `GET/PATCH /api/dev/branding` (cores, textos, brasão/logos futuros).
-  - Multi-cidade: `GET/POST/PATCH /api/dev/cities`.
-  - Usuários: `GET/POST /api/dev/users`, `PATCH /api/dev/users/:id` (troca de senha/papel).
+  - Multi-cidade: `GET/POST/PATCH /api/dev/cities`, `DELETE /api/dev/cities/:id` (remove também usuários admin, chamados, postes e bairros vinculados).
+  - Usuários: `GET/POST /api/dev/users`, `PATCH /api/dev/users/:id` (troca de senha/papel), `DELETE /api/dev/users/:id`.
 
 ## Estrutura de dados
 

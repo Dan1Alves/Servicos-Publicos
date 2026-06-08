@@ -257,6 +257,7 @@ function initDb() {
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL,
     city_id INTEGER,
+    city_setup_completed INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(city_id) REFERENCES cities(id)
   )`).run();
@@ -282,6 +283,7 @@ function initDb() {
   ensureColumn('posts', 'district_id', 'INTEGER');
   ensureColumn('posts', 'street_id', 'INTEGER');
   ensureColumn('users', 'city_id', 'INTEGER');
+  ensureColumn('users', 'city_setup_completed', 'INTEGER DEFAULT 0');
 
   db.prepare('CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status)').run();
   db.prepare('CREATE INDEX IF NOT EXISTS idx_reports_city ON reports(city_id)').run();
@@ -295,6 +297,7 @@ function initDb() {
   seedPosts();
   normalizeStatuses();
   bindAdminsToDefaultCity();
+  markDevUsersConfigured();
 }
 
 function ensureColumn(table, column, definition) {
@@ -341,9 +344,9 @@ function seedUsers() {
     const devHash = bcrypt.hashSync('dev123', 10);
     const defaultCity = getDefaultCity();
     const adminCityId = defaultCity?.id || null;
-    const stmt = db.prepare('INSERT INTO users (username, password_hash, role, city_id) VALUES (?,?,?,?)');
-    stmt.run('admin', adminHash, 'admin', adminCityId);
-    stmt.run('dev', devHash, 'dev', null);
+    const stmt = db.prepare('INSERT INTO users (username, password_hash, role, city_id, city_setup_completed) VALUES (?,?,?,?,?)');
+    stmt.run('admin', adminHash, 'admin', adminCityId, 0);
+    stmt.run('dev', devHash, 'dev', null, 1);
   }
 }
 
@@ -352,6 +355,11 @@ function bindAdminsToDefaultCity() {
   if (!defaultCity) return;
   db.prepare("UPDATE users SET city_id = ? WHERE role = 'admin' AND (city_id IS NULL OR city_id = 0)")
     .run(defaultCity.id);
+}
+
+function markDevUsersConfigured() {
+  db.prepare("UPDATE users SET city_setup_completed = 1 WHERE role = 'dev'")
+    .run();
 }
 
 function seedBranding() {
@@ -470,6 +478,11 @@ function getCityById(id) {
   return db.prepare('SELECT * FROM cities WHERE id = ?').get(id);
 }
 
+function getUserById(id) {
+  if (!id) return null;
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+}
+
 function getDefaultCity() {
   return getCityBySlug(DEFAULT_CITY_SLUG) || db.prepare('SELECT * FROM cities WHERE active = 1 LIMIT 1').get();
 }
@@ -517,6 +530,20 @@ function appendHistory(reportId, status, note, author) {
   }
   list.push({ status, note: note || null, by: author || 'sistema', at: now });
   db.prepare('UPDATE reports SET history = ? WHERE id = ?').run(JSON.stringify(list), reportId);
+}
+
+function removeReportImages(rows) {
+  (rows || []).forEach((row) => {
+    if (!row.image || !row.image.startsWith('/uploads/')) return;
+    const filePath = path.join(UPLOAD_DIR, path.basename(row.image));
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (error) {
+      console.warn(`Nao foi possivel remover upload ${filePath}`, error.message);
+    }
+  });
 }
 
 function getActiveService(slug) {
@@ -784,27 +811,35 @@ app.post('/api/login', async (req, res) => {
       default_zoom: city.default_zoom
     };
   }
-  res.json({ token, role: user.role, city: cityPayload });
+  const setupRequired = user.role === 'admin' && Number(user.city_setup_completed) !== 1;
+  res.json({ token, role: user.role, city: cityPayload, setupRequired });
 });
 app.get('/api/admin/meta', authMiddleware, requireRole('admin'), (req, res) => {
   const city = getScopedCity(req);
   if (!city) return res.status(400).json({ error: 'Cidade nao configurada para este usuario' });
-  res.json({ city, ...getFilters(city.id) });
+  const user = getUserById(req.user.id);
+  const setupRequired = req.user.role === 'admin' && Number(user?.city_setup_completed) !== 1;
+  res.json({ city, setupRequired, ...getFilters(city.id) });
 });
 
 app.patch('/api/admin/city', authMiddleware, requireRole('admin'), (req, res) => {
   const city = getScopedCity(req);
   if (!city) return res.status(400).json({ error: 'Cidade nao configurada para este usuario' });
+  const name = sanitizeText(req.body.name, 120);
   const defaultLat = parseNumberInRange(req.body.default_lat, -90, 90);
   const defaultLng = parseNumberInRange(req.body.default_lng, -180, 180);
   const defaultZoom = parseNumberInRange(req.body.default_zoom ?? city.default_zoom, 3, 20);
+  if (!name) {
+    return res.status(400).json({ error: 'Nome da cidade e obrigatorio.' });
+  }
   if (defaultLat === null || defaultLng === null || defaultZoom === null) {
     return res.status(400).json({ error: 'Centro do mapa invalido. Informe latitude, longitude e zoom validos.' });
   }
-  db.prepare('UPDATE cities SET default_lat = ?, default_lng = ?, default_zoom = ? WHERE id = ?')
-    .run(defaultLat, defaultLng, Math.round(defaultZoom), city.id);
+  db.prepare('UPDATE cities SET name = ?, default_lat = ?, default_lng = ?, default_zoom = ? WHERE id = ?')
+    .run(name, defaultLat, defaultLng, Math.round(defaultZoom), city.id);
+  db.prepare('UPDATE users SET city_setup_completed = 1 WHERE id = ?').run(req.user.id);
   persistDb();
-  res.json({ ok: true, city: getCityById(city.id) });
+  res.json({ ok: true, city: getCityById(city.id), setupRequired: false });
 });
 
 app.get('/api/admin/dashboard', authMiddleware, requireRole('admin'), (req, res) => {
@@ -951,6 +986,7 @@ app.put('/api/dev/posts/:id', authMiddleware, requireRole('dev'), (req, res) => 
 
 app.delete('/api/dev/posts/:id', authMiddleware, requireRole('dev'), (req, res) => {
   db.prepare('DELETE FROM posts WHERE id = ?').run(req.params.id);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -966,6 +1002,7 @@ app.post('/api/dev/cities', authMiddleware, requireRole('dev'), (req, res) => {
   }
   db.prepare('INSERT INTO cities (name, slug, default_lat, default_lng, default_zoom, active) VALUES (?,?,?,?,?,1)')
     .run(name.trim(), slug.trim().toLowerCase(), Number(default_lat), Number(default_lng), Number(default_zoom) || 13);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -983,6 +1020,25 @@ app.patch('/api/dev/cities/:id', authMiddleware, requireRole('dev'), (req, res) 
   if (!fields.length) return res.json({ ok: true });
   params.push(city.id);
   db.prepare(`UPDATE cities SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+  persistDb();
+  res.json({ ok: true });
+});
+
+app.delete('/api/dev/cities/:id', authMiddleware, requireRole('dev'), (req, res) => {
+  const city = db.prepare('SELECT * FROM cities WHERE id = ?').get(req.params.id);
+  if (!city) return res.status(404).json({ error: 'Cidade nao encontrada' });
+  const reports = db.prepare('SELECT id, image FROM reports WHERE city_id = ?').all(city.id);
+  const reportIds = reports.map(row => row.id);
+  reportIds.forEach((id) => {
+    db.prepare('DELETE FROM report_history WHERE report_id = ?').run(id);
+  });
+  removeReportImages(reports);
+  db.prepare('DELETE FROM reports WHERE city_id = ?').run(city.id);
+  db.prepare('DELETE FROM users WHERE city_id = ?').run(city.id);
+  db.prepare('DELETE FROM posts WHERE city_id = ?').run(city.id);
+  db.prepare('DELETE FROM districts WHERE city_id = ?').run(city.id);
+  db.prepare('DELETE FROM cities WHERE id = ?').run(city.id);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -998,6 +1054,7 @@ app.post('/api/dev/services', authMiddleware, requireRole('dev'), (req, res) => 
   }
   db.prepare('INSERT INTO services (name, slug, description, status, order_index) VALUES (?,?,?,?,?)')
     .run(name.trim(), slug.trim().toLowerCase(), description || '', status || 'upcoming', Number(order_index) || 0);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -1015,6 +1072,7 @@ app.patch('/api/dev/services/:id', authMiddleware, requireRole('dev'), (req, res
   if (!fields.length) return res.json({ ok: true });
   params.push(service.id);
   db.prepare(`UPDATE services SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -1026,11 +1084,12 @@ app.patch('/api/dev/branding', authMiddleware, requireRole('dev'), (req, res) =>
   const branding = getBranding() || {};
   const next = { ...branding, ...req.body };
   saveBranding(next);
+  persistDb();
   res.json({ ok: true });
 });
 
 app.get('/api/dev/users', authMiddleware, requireRole('dev'), (req, res) => {
-  const users = db.prepare(`SELECT u.id, u.username, u.role, u.created_at, u.city_id,
+  const users = db.prepare(`SELECT u.id, u.username, u.role, u.created_at, u.city_id, u.city_setup_completed,
       c.name as city_name, c.slug as city_slug
     FROM users u
     LEFT JOIN cities c ON u.city_id = c.id
@@ -1058,8 +1117,10 @@ app.post('/api/dev/users', authMiddleware, requireRole('dev'), async (req, res) 
     cityId = city?.id || null;
   }
   const hash = bcrypt.hashSync(password, 10);
-  db.prepare('INSERT INTO users (username, password_hash, role, city_id) VALUES (?,?,?,?)')
-    .run(username.trim(), hash, role, cityId);
+  const setupCompleted = role === 'admin' ? 0 : 1;
+  db.prepare('INSERT INTO users (username, password_hash, role, city_id, city_setup_completed) VALUES (?,?,?,?,?)')
+    .run(username.trim(), hash, role, cityId, setupCompleted);
+  persistDb();
   res.json({ ok: true });
 });
 
@@ -1085,6 +1146,8 @@ app.patch('/api/dev/users/:id', authMiddleware, requireRole('dev'), async (req, 
   if (req.body.role) {
     fields.push('role = ?');
     params.push(req.body.role);
+    fields.push('city_setup_completed = ?');
+    params.push(req.body.role === 'admin' ? 0 : 1);
   }
   if (req.body.city_slug !== undefined) {
     fields.push('city_id = ?');
@@ -1098,6 +1161,25 @@ app.patch('/api/dev/users/:id', authMiddleware, requireRole('dev'), async (req, 
   if (!fields.length) return res.json({ ok: true });
   params.push(user.id);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+  persistDb();
+  res.json({ ok: true });
+});
+
+app.delete('/api/dev/users/:id', authMiddleware, requireRole('dev'), (req, res) => {
+  const id = Number(req.params.id);
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  if (!user) return res.status(404).json({ error: 'Usuario nao encontrado' });
+  if (user.id === req.user.id) {
+    return res.status(400).json({ error: 'Voce nao pode apagar o proprio usuario logado.' });
+  }
+  if (user.role === 'dev') {
+    const devCount = db.prepare("SELECT COUNT(*) as total FROM users WHERE role = 'dev'").get().total;
+    if (devCount <= 1) {
+      return res.status(400).json({ error: 'Nao e permitido apagar o ultimo usuario Dev.' });
+    }
+  }
+  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  persistDb();
   res.json({ ok: true });
 });
 const clientRoutes = [

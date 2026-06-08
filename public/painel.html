@@ -8,10 +8,41 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="/css/style.css?v=city-routing-20260607" />
+  <link rel="stylesheet" href="/css/style.css?v=city-setup-dev-delete-20260607" />
 </head>
 <body class="panel-body">
   <div class="panel-app" id="panelApp" hidden>
+    <div class="setup-modal" id="citySetupModal" hidden>
+      <section class="auth-card setup-card">
+        <div>
+          <p class="eyebrow">Primeiro acesso</p>
+          <h2>Configure sua cidade</h2>
+          <p class="muted">Informe o nome oficial da cidade e o centro inicial do mapa publico.</p>
+        </div>
+        <form id="citySetupForm" class="setup-form">
+          <div>
+            <label for="setupCityName">Nome da cidade</label>
+            <input type="text" id="setupCityName" name="name" required />
+          </div>
+          <div class="three-column">
+            <div>
+              <label for="setupCityLat">Latitude</label>
+              <input type="number" step="any" id="setupCityLat" name="default_lat" required />
+            </div>
+            <div>
+              <label for="setupCityLng">Longitude</label>
+              <input type="number" step="any" id="setupCityLng" name="default_lng" required />
+            </div>
+            <div>
+              <label for="setupCityZoom">Zoom</label>
+              <input type="number" min="3" max="20" id="setupCityZoom" name="default_zoom" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Salvar e acessar painel</button>
+          <div class="result" id="citySetupResult"></div>
+        </form>
+      </section>
+    </div>
     <aside class="panel-sidebar">
       <div class="sidebar-brand">
         <p class="eyebrow">Gestão urbana</p>
@@ -64,6 +95,10 @@
                     <h3>Centro da cidade</h3>
                   </div>
                   <a id="cityPublicUrl" class="ghost-link" href="/" target="_blank" rel="noopener">Abrir portal</a>
+                </div>
+                <div>
+                  <label for="cityCenterName">Nome da cidade</label>
+                  <input type="text" id="cityCenterName" name="name" required />
                 </div>
                 <div class="three-column">
                   <div>
@@ -427,6 +462,12 @@
                 <input type="number" name="default_zoom" placeholder="Zoom" />
                 <div class="form-footer"><button class="btn btn-primary">Adicionar cidade</button></div>
               </form>
+              <div class="table-wrap" style="margin-top:1rem">
+                <table id="citiesTable">
+                  <thead><tr><th>Cidade</th><th>Slug</th><th>Centro</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
               <form id="userForm" style="margin-top:1rem">
                 <input type="text" name="username" placeholder="Usuário" required />
                 <input type="password" name="password" placeholder="Senha" required />
@@ -439,6 +480,12 @@
                 </select>
                 <div class="form-footer"><button class="btn btn-primary">Criar usuário</button></div>
               </form>
+              <div class="table-wrap" style="margin-top:1rem">
+                <table id="usersTable">
+                  <thead><tr><th>Usuário</th><th>Perfil</th><th>Cidade</th><th>Criado em</th><th>Ações</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </details>
           </section>
         </section>
@@ -451,6 +498,6 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/js/painel.js?v=city-routing-20260607" defer></script>
+  <script src="/js/painel.js?v=city-setup-dev-delete-20260607" defer></script>
 </body>
 </html>

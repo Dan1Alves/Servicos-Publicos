@@ -1043,6 +1043,37 @@ textarea {
   padding: 1.8rem;
 }
 
+.setup-open {
+  overflow: hidden;
+}
+
+.setup-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 18, 31, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.setup-modal[hidden] {
+  display: none;
+}
+
+.setup-card {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  margin: 0;
+}
+
+.setup-form {
+  display: grid;
+  gap: 1rem;
+}
+
 .login-screen {
   min-height: 100vh;
   display: flex;
@@ -1336,6 +1367,20 @@ textarea {
   color: #fff;
 }
 
+.panel-shell .btn-danger {
+  background: #b42318;
+  color: #fff;
+  border-color: #b42318;
+  box-shadow: none;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 1024px) {
   .panel-app {
     grid-template-columns: 1fr;
@@ -1368,6 +1413,9 @@ textarea {
     padding: 2rem 1rem 3rem;
   }
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .three-column {
     grid-template-columns: 1fr;
   }
   .panel-card {
